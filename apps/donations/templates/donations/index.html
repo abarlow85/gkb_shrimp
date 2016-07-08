@@ -1,0 +1,406 @@
+<html ng-app = "bikeSelect">
+<head>
+<script type = "text/javascript" src = "https://ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.min.js"></script>
+​<script>
+	var bikeSelect = angular.module('bikeSelect', [])
+		.config(function($interpolateProvider) {
+			$interpolateProvider.startSymbol('[[').endSymbol(']]');
+		});
+	bikeSelect.factory('bikeOptionsFactory', function($http){
+		var factory = {};
+		factory.selectionData = function(callback){
+			var data = $http.get('/form').success(function(response){
+				callback(response);
+			});
+			
+		};
+		// factory.bikeType = {
+		// 	"kids": {
+		// 		"status": false,
+		// 		"price": 100.00
+		// 	},
+		// 	"hybrid": {
+		// 		"status": false,
+		// 		"price": 110.00
+		// 	},
+		// 	"cruiser": {
+		// 		"status": false,
+		// 		"price": 120.00
+		// 	},
+		// 	"city": {
+		// 		"status": false,
+		// 		"price": 200.00
+		// 	},
+		// 	"road": {
+		// 		"status": false,
+		// 		"price": 130.00
+		// 	},
+		// 	"mountain": {
+		// 		"status": false,
+		// 		"price": 160.00
+		// 	}
+		// };
+		factory.wheels = {
+			"base":{
+				"status":false,
+				"multiplier":1.0,
+				"requisite":"all",
+			},
+			"roller":{
+				"status":false,
+				"multiplier":1.1,
+				"requisite": {
+					"bikeType": ["road", "city", "cruiser", "hybrid"]
+				} 
+			}
+		};
+		factory.brand = {
+			"Trek":{
+				"status":false,
+				"multiplier": 1.2,
+				"requisite": {
+					"bikeType": ["road", "hybrid", "kids", "mountain"]
+				}
+			},
+			"Diamond":{
+				"status":false,
+				"multiplier":1.5,
+				"requisite": {
+					"bikeType": ["cruiser", "road", "city", "hybrid"]
+				}
+			},
+		};
+		factory.cosmetic = {
+			"perfect":{
+				"status":false,
+				"multiplier":1.3,
+				"requisite":"all"
+			},
+			"good":{
+				"status":false,
+				"multiplier": 1.15,
+				"requisite":"all"
+			},
+			"average":{
+				"status":false,
+				"multiplier":1.0,
+				"requisite":"all"
+			},
+			"poor":{
+				"status":false,
+				"multiplier":1.0,
+				"requisite":"all"
+			},	
+		};
+		factory.frame = {
+			"all":{
+				"status": false,
+				"multiplier": 1.0,
+				"requisite":"all"
+			},
+			"speed":{
+				"status": false,
+				"multiplier": 1.25,
+				"requisite":{
+					"bikeType": ["road", "city", "cruiser", "hybrid"]
+				}
+			},
+			"super":{
+				"status": false,
+				"multiplier": 1.9,
+				"requisite":{
+					"bikeType": ["road", "city", "cruiser"],
+					"wheels": ["roller"],
+					"brand": ["Diamond"]
+
+				}
+			},
+			"rugged":{
+				"status": false,
+				"multiplier": 1.9,
+				"requisite":{
+					"bikeType": ["road", "city", "cruiser"],
+					"wheels": ["roller"],
+					"brand": ["Diamond"]
+				}
+			}
+		};
+		factory.features = {
+			"Multi Speed":{
+				"status": false,
+				"multiplier":1.31,
+				"requisite":{
+					"bikeType": ["road", "city", "cruiser", "hybrid", "mountain"]
+				}
+			},
+			"Front Shock":{
+				"status": false,
+				"multiplier":1.23
+			},
+			"Bell":{
+				"status":false,
+				"multiplier":9.95
+			}
+		};
+
+		factory.getInventory = function(){
+			$http.get("/inventory").success(function(response){
+				console.log(JSON.parse(response));
+			});
+		};
+
+		factory.assembleScope = function(select, callback){
+			callback(this[select])
+		}
+		factory.valueSelect = function(select, option){ 
+			if (select != "features"){
+				this[select][option]["status"] = true;
+			}
+			console.log(this[select][option]);
+			
+			for (var selection in this[select]){
+				if (select != "features"){
+					if (selection != option){
+						console.log("hey there")
+						this[select][selection]["status"] = false;
+					}
+				}else if (selection == option){
+					console.log("heyyo")
+					console.log(selection)
+					if (this[select][selection]["status"]== false){
+						console.log("this should work")
+						this[select][selection]["status"] = true;
+					}else{
+						console.log("we are going false")
+						this[select][selection]["status"] = false;
+					}
+				}
+			}
+
+				console.log(this[select])
+		};
+
+		factory.assembleBike = function(){
+			var typeArr = ["bikeType", "wheels", "brand", "cosmetic", "frame", "features"];
+			var sType;
+			var bikeFinal = {
+				"price": 0,
+				"features":[]
+			};
+
+			for (var index = 0; index < typeArr.length; index++){
+				sType = this[typeArr[index]]; 
+				console.log(sType)
+				for (var opt in sType){
+					if (sType[opt].status == true){
+						if (typeArr[index] != "features"){
+							bikeFinal[typeArr[index]] = opt
+						}else{
+							bikeFinal.features.push(opt)
+						}
+						if (sType[opt].price){
+							bikeFinal.price += sType[opt].price;
+						}else if (sType[opt].multiplier){
+							bikeFinal.price *= sType[opt].multiplier;
+						};
+					};
+				}
+			}
+
+			return bikeFinal
+		}
+
+
+		return factory
+	});
+
+	bikeSelect.controller('tableController', function($scope, bikeOptionsFactory){
+		var selectionData = bikeOptionsFactory.selectionData(function(data){
+			console.log(data);
+			$scope.bikeType = data.bikeType
+		})
+		
+		// console.log($scope.bikeType)
+		// bikeOptionsFactory.selectionData();
+
+		bikeOptionsFactory.assembleScope("bikeType", function(optObject){
+			for (var opt in optObject){
+				$scope.bikeType[opt] = optObject[opt].status
+			};
+		});
+
+		$scope.getInv = function(){
+			bikeOptionsFactory.getInventory(function(){
+
+			})
+		}
+
+		function optionClicked(type, select, sIndex, prep){
+			if (select){
+
+				var selectArr = ["bikeType", "wheels", "brand", "cosmetic", "frame", "features"]
+				var selectionBool;
+
+				while (sIndex < selectArr.length){
+					selectionBool = selectArr[sIndex]
+					if ($scope.selected[selectionBool]){
+						$scope.selected[selectionBool] = "";
+					};
+					sIndex++;
+				};
+
+				$scope[type][select] = true;
+
+				if (type != "features"){
+					for (var opt in $scope[type]){
+						if (opt != select){
+							$scope[type][opt] = false;
+						}
+					}
+				}
+
+				bikeOptionsFactory.valueSelect(type, select);
+
+				if(prep){
+					bikeOptionsFactory.assembleScope(prep, function(optObject){
+						console.log(optObject)
+						$scope[prep] = {};
+						console.log(prep)
+						console.log($scope[prep])
+						for (var opt in optObject){
+
+							console.log(opt);
+							console.log(optObject[opt])
+
+							$scope[optObject[opt]] = {};
+
+							if (optObject[opt].requisite == "all"){
+
+								$scope[prep][opt] = optObject[opt].status
+							}else{
+
+								pass = true;
+								var requiredArr;
+
+								for (var required in optObject[opt].requisite){
+
+									var mustHave;
+									requiredArr = optObject[opt].requisite[required];
+
+									for (var idx = 0; idx < requiredArr.length; idx++){
+
+										mustHave = requiredArr[idx];
+										if ($scope[required][mustHave]){
+											break;
+										}
+									}
+
+									if (idx == requiredArr.length){
+										pass = false;
+										console.log("real pass")
+										break;
+									}
+								}
+
+								if (pass){
+									$scope[prep][opt] = optObject[opt].status;
+								}
+
+							}
+						};
+					});
+				}
+			};
+		}
+
+		$scope.selected = {};
+
+		$scope.$watch('selected.type',function(){
+			console.log('CHANGE')
+			optionClicked("bikeType",$scope.selected.type, 1, "wheels")
+		});
+
+		$scope.$watch('selected.wheels',function(){
+			optionClicked("wheels",$scope.selected.wheels, 2, "brand")
+		});
+
+		$scope.$watch('selected.brand',function(){
+			optionClicked("brand",$scope.selected.brand, 3, "cosmetic")
+		});
+
+		$scope.$watch('selected.cosmetic',function(){
+			optionClicked("cosmetic",$scope.selected.cosmetic, 4, "frame")
+		});
+
+		$scope.$watch('selected.frame',function(){
+			optionClicked("frame",$scope.selected.frame, 5, "features")
+		});
+
+		$scope.checkbox = function(item){
+			console.log(item)
+			optionClicked("features",item, 6)
+		};
+
+		$scope.getBike = function(){
+			var bike = bikeOptionsFactory.assembleBike()
+			console.log(bike)
+		}
+
+
+	});
+
+</script>
+</head>
+
+
+<body>
+	<div ng-controller = "tableController">
+		
+		<div>
+			<h2>Select a bike</h2>
+			<select ng-model="selected.type" size = "5">
+				<option ng-repeat = "(key, value) in bikeType" >[[key]]</option>
+			</select>
+		</div>
+
+		<div ng-if = "selected.type">
+			<h2>Select a Wheel</h2>
+			<select ng-model="selected.wheels" size = "3">
+				<option ng-repeat = "(key, value) in wheels" >[[key]]</option>
+			</select>
+		</div>
+
+		<div ng-if = "selected.wheels">
+			<h2>Select a Brand</h2>
+			<select ng-model="selected.brand" size = "3">
+				<option ng-repeat = "(key, value) in brand">[[key]]</option>
+			</select>
+		</div>
+
+		<div ng-if = "selected.brand">
+			<h2>Select Cosmetic Quality</h2>
+			<select ng-model="selected.cosmetic" size = "5">
+				<option ng-repeat = "(key, value) in cosmetic">[[key]]</option>
+			</select>
+		</div>
+
+		<div ng-if = "selected.cosmetic">
+			<h2>Select a Frame</h2>
+			<select ng-model="selected.frame" size = "4">
+				<option ng-repeat = "(key, value) in frame">[[key]]</option>
+			</select>
+		</div>
+
+		<div ng-if = "selected.frame">
+			<h2>Add Features</h2>
+			<span ng-repeat="(key, value) in features">
+        		<input type="checkbox" id="[[key]]" ng-click="checkbox(key)")/>[[key]]<br>
+      		</span>
+
+
+      		<button ng-click="getBike()">All Done</button>
+		</div>
+		<button ng-click="getInv()">Get Inv</button>
+	</div>
+</body> 
+</html>
