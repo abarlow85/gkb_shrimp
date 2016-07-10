@@ -20,6 +20,7 @@ from apps.donations import views
 urlpatterns = [
 	url(r'^$', views.home),
 	url(r'^form/$', views.form_data),
+    url(r'^create_category/$', views.create_category),
     url(r'^inventory/$', views.get_inv),
     url(r'^admin/', admin.site.urls),
 ]

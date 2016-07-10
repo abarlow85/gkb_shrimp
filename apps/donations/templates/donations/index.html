@@ -1,10 +1,35 @@
 <html ng-app = "bikeSelect">
 <head>
 <script type = "text/javascript" src = "https://ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.min.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.4.0/angular-cookies.js"></script>
+
 ​<script>
-	var bikeSelect = angular.module('bikeSelect', [])
-		.config(function($interpolateProvider) {
+
+// var bikeSelect = angular.module('bikeSelect', ['ngCookies']).
+//     config([
+//     '$httpProvider',
+//     '$interpolateProvider',
+//     function($httpProvider, $cookies, $interpolateProvider) {
+//         $interpolateProvider.startSymbol('{$');
+//         $interpolateProvider.endSymbol('$}');
+// 				$httpProvider.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+//         $httpProvider.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded';
+//     }]).
+//     run([
+//     '$http',
+//     '$cookies',
+//     function($http, $cookies) {
+//         $http.defaults.headers.post['X-CSRFToken'] = $cookies.csrftoken;
+//     }]);
+	var bikeSelect = angular.module('bikeSelect', ['ngCookies'])
+		.config(function($interpolateProvider//$cookies
+			, $httpProvider) {
 			$interpolateProvider.startSymbol('[[').endSymbol(']]');
+			$httpProvider.defaults.xsrfCookieName = 'csrftoken';
+			$httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken'
+		})
+		.run(function run($http, $cookies){
+			$http.defaults.headers.common['X-CSRFToken'] = $cookies['csrftoken']
 		});
 	bikeSelect.factory('bikeOptionsFactory', function($http){
 		var factory = {};
@@ -12,8 +37,10 @@
 			var data = $http.get('/form').success(function(response){
 				callback(response);
 			});
-			
+
 		};
+
+
 		// factory.bikeType = {
 		// 	"kids": {
 		// 		"status": false,
@@ -51,7 +78,7 @@
 				"multiplier":1.1,
 				"requisite": {
 					"bikeType": ["road", "city", "cruiser", "hybrid"]
-				} 
+				}
 			}
 		};
 		factory.brand = {
@@ -90,7 +117,7 @@
 				"status":false,
 				"multiplier":1.0,
 				"requisite":"all"
-			},	
+			},
 		};
 		factory.frame = {
 			"all":{
@@ -149,15 +176,22 @@
 			});
 		};
 
+		factory.create_category = function(name){
+			console.log("FACTORY NAME", name)
+			$http.post("/create_category/", name).success(function(response){
+				console.log(response);
+			})
+		}
+
 		factory.assembleScope = function(select, callback){
 			callback(this[select])
 		}
-		factory.valueSelect = function(select, option){ 
+		factory.valueSelect = function(select, option){
 			if (select != "features"){
 				this[select][option]["status"] = true;
 			}
 			console.log(this[select][option]);
-			
+
 			for (var selection in this[select]){
 				if (select != "features"){
 					if (selection != option){
@@ -189,7 +223,7 @@
 			};
 
 			for (var index = 0; index < typeArr.length; index++){
-				sType = this[typeArr[index]]; 
+				sType = this[typeArr[index]];
 				console.log(sType)
 				for (var opt in sType){
 					if (sType[opt].status == true){
@@ -219,7 +253,7 @@
 			console.log(data);
 			$scope.bikeType = data.bikeType
 		})
-		
+
 		// console.log($scope.bikeType)
 		// bikeOptionsFactory.selectionData();
 
@@ -232,6 +266,13 @@
 		$scope.getInv = function(){
 			bikeOptionsFactory.getInventory(function(){
 
+			})
+		}
+		$scope.create_category = function(){
+			console.log("SCOPING FOR CAT NAME", $scope.category_name);
+
+			bikeOptionsFactory.create_category($scope.category_name, function(data){
+				console.log(data);
 			})
 		}
 
@@ -355,7 +396,7 @@
 
 <body>
 	<div ng-controller = "tableController">
-		
+
 		<div>
 			<h2>Select a bike</h2>
 			<select ng-model="selected.type" size = "5">
@@ -401,6 +442,9 @@
       		<button ng-click="getBike()">All Done</button>
 		</div>
 		<button ng-click="getInv()">Get Inv</button>
+				<input type="text" name="name" ng-model="category_name" />
+				<button ng-click="create_category()">Create a Category</button>
+
 	</div>
-</body> 
+</body>
 </html>
